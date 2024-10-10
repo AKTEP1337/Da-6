@@ -1,213 +1,208 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System;
 using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Threading;
-using System.Security.Cryptography.X509Certificates;
 using MySqlConnector;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using System.Xml.Linq;
-using System.Windows.Forms.Design.Behavior;
-using Microsoft.EntityFrameworkCore.Metadata;
-using System.Runtime.CompilerServices;
-using Microsoft.VisualBasic.ApplicationServices;
-using static System.Windows.Forms.DataFormats;
 
 namespace Da_6
 {
     public partial class Form4 : Form
     {
         Thread th;
-
-
-        public int xiu;
         private string login;
         private int user_id;
-        private string user_gender;
         string connectionString = "server=localhost;user=root;database=da_6;password=16x356L899MI;";
-
 
         public Form4(string login)
         {
             InitializeComponent();
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             this.login = login;
-            Loaduser_id();
+            LoadUserId();
             LoadTrainingTypes();
         }
 
-
-        private void Loaduser_id()
+        // Загрузка ID пользователя по логину
+        private void LoadUserId()
         {
-            using (var connection = new MySqlConnection("server=localhost;user=root;database=da_6;password=16x356L899MI;"))
+            try
             {
-                connection.Open();
-                var command = new MySqlCommand("SELECT user_id FROM da_6.users WHERE login = @login", connection);
-                command.Parameters.AddWithValue("@login", login);
-                user_id = Convert.ToInt32(command.ExecuteScalar());
+                using (var connection = new MySqlConnection(connectionString))
+                {
+                    connection.Open();
+                    var command = new MySqlCommand("SELECT user_id FROM da_6.users WHERE login = @login", connection);
+                    command.Parameters.AddWithValue("@login", login);
+                    user_id = Convert.ToInt32(command.ExecuteScalar());
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при загрузке ID пользователя: " + ex.Message);
             }
         }
 
+        // Загрузка типов тренировки в ComboBox
         private void LoadTrainingTypes()
         {
-            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            try
             {
-                connection.Open();
-                string query = "SELECT training_type_id, type_name FROM da_6.training_types"; // Предполагается, что у вас есть таблица training_types 
-                MySqlCommand command = new MySqlCommand(query, connection);
-                MySqlDataReader reader = command.ExecuteReader();
-
-                while (reader.Read())
+                using (MySqlConnection connection = new MySqlConnection(connectionString))
                 {
-                    var item = new comboboxitem
+                    connection.Open();
+                    string query = "SELECT training_type_id, type_name FROM da_6.training_types";
+                    MySqlCommand command = new MySqlCommand(query, connection);
+                    MySqlDataReader reader = command.ExecuteReader();
+
+                    while (reader.Read())
                     {
-                        Text = reader["type_name"].ToString(),
-                        Value = reader["training_type_id"].ToString()
-                    };
+                        var item = new ComboBoxItem
+                        {
+                            Text = reader["type_name"].ToString(),
+                            Value = reader["training_type_id"].ToString()
+                        };
 
-                    comboBox1.Items.Add(item);
-
-
+                        comboBox1.Items.Add(item);
+                    }
+                    reader.Close();
                 }
-                reader.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при загрузке типов тренировки: " + ex.Message);
             }
         }
-        public Form4()
-        {
 
-        }
-
-        public class comboboxitem
+        // Класс для представления элемента ComboBox
+        public class ComboBoxItem
         {
             public string Text { get; set; }
             public string Value { get; set; }
 
             public override string ToString() => Text;
         }
+
+        // Обработчик изменения выбранного элемента в ComboBox
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            string selectedItem = comboBox1.SelectedItem.ToString();
-
+            // Действия при изменении выбранного элемента (при необходимости)
+            string selectedItem = comboBox1.SelectedItem?.ToString();
         }
+
+        // Обработчик удаления пользователя
         private void button1_Click(object sender, EventArgs e)
         {
-            // Код для удаления данных о пользователе из таблицы users
-    string connectionString = "server=localhost;user=root;database=da_6;password=16x356L899MI;";
-            string query = "DELETE FROM users WHERE login = @login";
-            using (MySqlConnection connection = new MySqlConnection(connectionString))
-            {
-                connection.Open();
-                MySqlCommand command = new MySqlCommand(query, connection);
-                command.Parameters.AddWithValue("@login", login);
-                command.ExecuteNonQuery();
-            }
+            // Подтверждение удаления пользователя
+            var confirmResult = MessageBox.Show("Вы уверены, что хотите удалить пользователя?", "Подтверждение удаления", MessageBoxButtons.YesNo);
+            if (confirmResult != DialogResult.Yes) return;
 
-            this.Close();
-            th = new Thread(open1);
-            th.SetApartmentState(ApartmentState.STA);
-            th.Start();
+            try
+            {
+                string query = "DELETE FROM users WHERE login = @login";
+                using (MySqlConnection connection = new MySqlConnection(connectionString))
+                {
+                    connection.Open();
+                    MySqlCommand command = new MySqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@login", login);
+                    command.ExecuteNonQuery();
+                }
+
+                MessageBox.Show("Пользователь успешно удален.");
+                this.Hide();
+                new Form2().Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при удалении пользователя: " + ex.Message);
+            }
         }
 
+        // Обработчик кнопки для записи данных о тренировке
+        private void button2_Click(object sender, EventArgs e)
+        {
+            var selectedItem = comboBox1.SelectedItem;
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Пожалуйста, выберите тип тренировки.");
+                return;
+            }
+
+            var training_type_id = ((ComboBoxItem)selectedItem).Value;
+
+            // Валидация ввода веса и роста
+            if (string.IsNullOrWhiteSpace(textBox1.Text) || string.IsNullOrWhiteSpace(textBox2.Text))
+            {
+                MessageBox.Show("Ошибка: Пожалуйста, введите значения в поля веса и роста.");
+                return;
+            }
+
+            if (!double.TryParse(textBox1.Text, out double weight) || !double.TryParse(textBox2.Text, out double height))
+            {
+                MessageBox.Show("Ошибка: Пожалуйста, введите числовые значения в поля веса и роста.");
+                return;
+            }
+
+            // Вычисляем индекс массы тела
+            double body_mass_index = Math.Round((height / (weight * weight) * 10000), 1);
+
+            // Сохраняем данные
+            if (SaveTrainingTypeId(training_type_id, body_mass_index))
+            {
+                MessageBox.Show("Данные успешно добавлены!");
+                this.Hide();
+                new Form6(user_id, training_type_id).Show();
+            }
+            else
+            {
+                MessageBox.Show("Ошибка при добавлении данных.");
+            }
+        }
+
+        // Метод для сохранения данных о тренировке
+        private bool SaveTrainingTypeId(string training_type_id, double body_mass_index)
+        {
+            try
+            {
+                string query = "INSERT INTO user_results (user_id, training_type_id, quantity, date, body_mass_index) " +
+                               "VALUES (@user_id, @training_type_id, @quantity, @date, @body_mass_index)";
+                DateTime date = DateTime.Now;
+                double quantity = 0;
+
+                using (MySqlConnection connection = new MySqlConnection(connectionString))
+                {
+                    MySqlCommand command = new MySqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@user_id", user_id);
+                    command.Parameters.AddWithValue("@training_type_id", training_type_id);
+                    command.Parameters.AddWithValue("@quantity", quantity);
+                    command.Parameters.AddWithValue("@date", date);
+                    command.Parameters.AddWithValue("@body_mass_index", body_mass_index);
+
+                    connection.Open();
+                    command.ExecuteNonQuery();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при сохранении данных: " + ex.Message);
+                return false;
+            }
+        }
+
+        private void Form4_Load(object sender, EventArgs e)
+        {
+            // Действия при загрузке формы (если нужно)
+        }
+
+        // Метод для открытия Form2
         public void open1(object obj)
         {
             Application.Run(new Form2());
         }
-
-
-        public void open2(int user_id, string training_type_id)
-        {
-            Application.Run(new Form6(user_id, training_type_id));
-        }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            var selectedItem = comboBox1.SelectedItem;
-            if (selectedItem != null)
-            {
-                // Получаем значение id выбранного типа тренировки 
-                var training_type_id = ((dynamic)selectedItem).Value;
-                // Теперь вы можете использовать trainingTypeId для вашего запроса 
-
-
-
-                if (string.IsNullOrWhiteSpace(textBox1.Text) || string.IsNullOrWhiteSpace(textBox2.Text))
-                {
-                    MessageBox.Show("Ошибка: Пожалуйста, введите значения в поля веса и роста.");
-                    return;
-                }
-
-                if (!double.TryParse(textBox1.Text, out double weight) || !double.TryParse(textBox2.Text, out double height))
-                {
-                    MessageBox.Show("Ошибка: Пожалуйста, введите числовые значения в поля веса и роста.");
-                    return;
-                }
-
-                SaveTrainingTypeId(training_type_id);
-
-                int xui = 0;
-                int xui2 = 0;
-                this.Close();
-                th = new Thread(() => open2(user_id, training_type_id));
-                th.SetApartmentState(ApartmentState.STA);
-                th.Start();
-            }
-            else
-            {
-                MessageBox.Show("Пожалуйста, выберите тип тренировки.");
-            }
-        }
-        // Метод для сохранения training_type_id 
-        private void SaveTrainingTypeId(string training_type_id)
-        {
-
-            // Параметры подключения к базе данных
-            string connectionString = "server=localhost;user=root;database=da_6;password=16x356L899MI;";
-            DateTime date = DateTime.Now;
-            string query = "INSERT INTO user_results (user_id, training_type_id, quantity, date, body_mass_index) VALUES (@user_id, @training_type_id,@quantity, @date, @body_mass_index)";
-            double weight = double.Parse(textBox1.Text);
-            double height = double.Parse(textBox2.Text);
-            double body_mass_index = Math.Round((height / (weight * weight) * 10000), 1);
-            double quantity = 0;
-
-            using (MySqlConnection conn = new MySqlConnection(connectionString))
-            {
-                MySqlCommand cmd = new MySqlCommand(query, conn);
-                cmd.Parameters.AddWithValue("@user_id", user_id);
-                cmd.Parameters.AddWithValue("@training_type_id", training_type_id);
-                cmd.Parameters.AddWithValue("@quantity", quantity);
-                cmd.Parameters.AddWithValue("@date", date);
-                cmd.Parameters.AddWithValue("@body_mass_index", body_mass_index);
-
-                try
-                {
-                    conn.Open();
-                    cmd.ExecuteNonQuery();
-                    MessageBox.Show("Данные успешно добавлены!");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Ошибка: " + ex.Message);
-                }
-
-            }
-        }
-        private void Form4_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-
-
     }
 }
+
