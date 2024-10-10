@@ -1,27 +1,18 @@
-﻿using MySqlConnector;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Da_6
 {
     public partial class Form5 : Form
     {
+        private string training_type_id;
+        private int user_id;
+        private int quantity;
+
         public Form5()
         {
             InitializeComponent();
         }
-
-        private string training_type_id;
-        private int user_id;
-        private int quantity;
 
         public Form5(string training_type_id, int user_id, int quantity)
         {
@@ -36,50 +27,55 @@ namespace Da_6
             label4.Text = quantity.ToString();
         }
 
+        // Обработчик кнопки для отправки данных
         private void button1_Click(object sender, EventArgs e)
         {
-
             if (string.IsNullOrEmpty(textBox1.Text) || string.IsNullOrEmpty(textBox2.Text))
             {
                 MessageBox.Show("Пожалуйста, заполните все поля", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
+            // Проверяем вводимые данные как числовые значения с учетом локали (например, использование '.' как разделителя)
             if (!double.TryParse(textBox1.Text, out double weight) || !double.TryParse(textBox2.Text, out double height))
             {
                 MessageBox.Show("Пожалуйста, введите числовые значения", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            double body_mass_index1 = Math.Round((height / (weight * weight) * 10000), 1);
+            // Вычисляем индекс массы тела (BMI)
+            double body_mass_index = Math.Round((height / (weight * weight) * 10000), 1);
 
+            // Получаем текущую дату
             DateTime date = DateTime.Now;
 
-            Form7 form7 = new Form7(user_id, training_type_id, quantity, date, body_mass_index1);
+            // Открываем новую форму с переданными параметрами
+            Form7 form7 = new Form7(user_id, training_type_id, quantity, date, body_mass_index);
             form7.Show();
-            this.Hide();
 
+            // Закрываем текущую форму
+            this.Close();
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
+        // Ограничение ввода для текстового поля веса (только цифры и одна точка)
         private void textBox1_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && e.KeyChar != '.' && e.KeyChar != '-')
+            // Разрешаем только цифры и одну точку для ввода
+            if (!char.IsControl(e.KeyChar) && (!char.IsDigit(e.KeyChar) && e.KeyChar != '.'))
             {
                 e.Handled = true;
             }
         }
 
+        // Ограничение ввода для текстового поля роста (только цифры и одна точка)
         private void textBox2_KeyPress(object sender, KeyPressEventArgs e)
         {
-            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && e.KeyChar != '.' && e.KeyChar != '-')
+            // Разрешаем только цифры и одну точку для ввода
+            if (!char.IsControl(e.KeyChar) && (!char.IsDigit(e.KeyChar) && e.KeyChar != '.'))
             {
                 e.Handled = true;
             }
         }
-
     }
 }
+
